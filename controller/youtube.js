@@ -56,7 +56,9 @@ const getYtInfo = async (req, res) => {
         // Ensure the download is complete before responding
         response.data.on('end', () => {
             const pathOffile = path.join(__dirname,'.'+filePath)
-            res.setHeader('Content-Disposition', 'attachment; filename=' + sanitizedTitle);
+
+            // res.setHeader('Content-Disposition', 'attachment; filename=' + sanitizedTitle);
+            
             res.sendFile(pathOffile)
             setTimeout(()=>{
                 if(fs.existsSync(pathOffile))
