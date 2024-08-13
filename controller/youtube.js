@@ -34,7 +34,7 @@ const getYtInfo = async (req, res) => {
            return res.json({status:400,message:'Unsupported Domain'}).status(200);
         }
          
-        const sanitizedTitle = title.slice(0,30).replace(/\s+/g, ''); // Remove spaces from the title
+        const sanitizedTitle = title.slice(0,30).split('/').join('').replace(/\s+/g, ''); // Remove spaces from the title
         const filePath = `./downloads/${sanitizedTitle}.mp4`; // Set the path where the file will be saved
         if(fs.existsSync(filePath)){
             fs.unlinkSync(filePath)
