@@ -18,6 +18,7 @@ const getYtInfo = async (req, res) => {
         let title;
         console.log(domain)
         if(domain == 'youtube.com' || domain == 'youtu.be'){
+            if(!data?.data?.low) return res.json({status:'400',message:"video Not found"}).status(400)
         if(quality=='low'){
            dUrl = data.data.low;
         }
