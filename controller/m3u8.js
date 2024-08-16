@@ -16,7 +16,17 @@ const M3U8 = async (req, res) => {
     const writeStream = fs.createWriteStream(filePath);
 
     // Pipe the stream to the file
+    let totalDownloaded = 0;
+
+    // Pipe the stream to the file
     stream.pipe(writeStream);
+
+    // Listen for the data event to accumulate the size of chunks
+    stream.on('data', (chunk) => {
+      totalDownloaded += chunk.length;
+      console.log(`Downloaded ${totalDownloaded} bytes`);
+    });
+
 
     // Listen for the finish event to know when the file is written
     writeStream.on('finish', () => {
