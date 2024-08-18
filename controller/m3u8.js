@@ -1,62 +1,88 @@
+const { alldown } = require("nayan-media-downloader");
+const fs = require('fs');
+const axios = require('axios');
 const path = require('path')
-const fs= require('fs');
-const m3u8stream = require('m3u8stream')
-const M3U8 = async (req, res) => {
- try {
-    const url = req.query.url;
-
+let ParseDomain  = import('parse-domain')
+const getYtInfo = async (req, res) => {
+    ParseDomain = await ParseDomain
+   
+    const { url,quality } = req.query;
     if (!url) {
-        return res.status(400).send('URL is required');
+        res.status(400).json({ status: 400, message: 'we need url mf' });
+        return;
     }
+    const domain = extractDomain(url)
+    try {
+        const data = await alldown(url);
+        let dUrl;
+        let title;
+        console.log(domain)
+        if(domain == 'youtube.com' || domain == 'youtu.be'){
+            if(!data?.data?.low) return res.json({status:'400',message:"video Not found"}).status(400)
+        if(quality=='low'){
+           dUrl = data.data.low;
+        }
+        else{
+           dUrl = data.data.high;
 
-    const fileName = `../downloads/video-${Date.now()}.ts`;
-    const filePath = path.join(__dirname, fileName);
+        }
+         ;
+         title =  data.data.title;
+        }
+        
+        else {
+            
+           return res.json({status:400,message:'Unsupported Domain'}).status(200);
+        }
+         
+        const sanitizedTitle = title.slice(0,30).split('/').join('').replace(/\s+/g, ''); // Remove spaces from the title
+        const filePath = `./downloads/${sanitizedTitle}.mp4`; // Set the path where the file will be saved
+        if(fs.existsSync(filePath)){
+            fs.unlinkSync(filePath)
+        }
+        // Ensure the downloads directory exists
+        if (!fs.existsSync('./downloads')) {
+            fs.mkdirSync('./downloads');
+        }
 
-    const stream = m3u8stream(url);
-    const writeStream = fs.createWriteStream(filePath);
-
-    // Pipe the stream to the file
-    let totalDownloaded = 0;
-
-    // Pipe the stream to the file
-    stream.pipe(writeStream);
-
-    // Listen for the data event to accumulate the size of chunks
-    stream.on('data', (chunk) => {
-      totalDownloaded += chunk.length;
-      console.log(`Downloaded ${totalDownloaded} bytes`);
-    });
-
-
-    // Listen for the finish event to know when the file is written
-    writeStream.on('finish', () => {
-        // Set headers for the file download
-        res.sendFile(filePath, (err) => {
-            if (err) {
-                console.error('Error sending file:', err);
-                res.status(500).send('Error sending file');
-            }
-            // Clean up the file after sending
-            fs.unlink(filePath, (unlinkErr) => {
-                if (unlinkErr) {
-                    console.error('Error deleting file:', unlinkErr);
-                }
-            });
+        // Download and save the file
+        const response = await axios({
+            method: 'get',
+            url: dUrl,
+            responseType: 'stream'
         });
-    });
 
-    // Handle errors in the streaming process
-    stream.on('error', (err) => {
-        console.error('Stream error:', err);
-        res.status(500).send('Error downloading video');
-    });
+        response.data.pipe(fs.createWriteStream(filePath));
 
-    writeStream.on('error', (err) => {
-        console.error('Write stream error:', err);
-        res.status(500).send('Error saving video');
-    });
- } catch (error) {
-    res.json({status:500,message:error.message}).status(500)
- }
+        // Ensure the download is complete before responding
+        response.data.on('end', () => {
+            const pathOffile = path.join(__dirname,'.'+filePath)
+
+            // res.setHeader('Content-Disposition', 'attachment; filename=' + sanitizedTitle);
+            
+            res.sendFile(pathOffile)
+            setTimeout(()=>{
+                if(fs.existsSync(pathOffile))
+                fs.unlinkSync(pathOffile)      
+            },1*60*60_000)
+        });
+
+        response.data.on('error', (err) => {
+            console.error('Download failed:', err);
+            
+            res.status(500).json({ status: 500, message: 'Error downloading file', error: err.message });
+            
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ status: 500, message: 'An error occurred', error: error.message || error.msg });
+    }
+};
+
+module.exports = { getYtInfo };
+
+function extractDomain(url) {
+    const domainPattern = /^(?:https?:\/\/)?(?:www\.)?([^\/]+)/i;
+    const match = url.match(domainPattern);
+    return match ? match[1] : null;
 }
-module.exports = {M3U8}
