@@ -37,11 +37,19 @@
             </button>
             <div id="loadingSpinner" class="hidden border-4 border-blue-500 border-t-transparent rounded-full w-12 h-12 animate-spin"></div>
 
+            <!-- Progress Bar -->
+            <div class="mt-4">
+                <div id="progressContainer" class="hidden w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%;"></div>
+                </div>
+                <p id="progressText" class="text-sm text-gray-600 text-center mt-2 hidden">0%</p>
+            </div>
+
             <!-- Error Message -->
             <div id="errorMessage" class="hidden text-red-600 mt-4"></div>
         </form>
-        <div id="responseMessage" class="mt-4 text-center text-red-500 hidden"></div>
     </div>
+
     <script>
         const downloadBtn = document.getElementById('downloadBtn');
         const loadingSpinner = document.getElementById('loadingSpinner');
@@ -49,41 +57,55 @@
         const urlInput = document.getElementById('url');
         const qualitySelect = document.getElementById('quality');
         const typeSelect = document.getElementById('type');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
 
         downloadBtn.addEventListener('click', async (event) => {
-            // Prevent form submission
             event.preventDefault();
 
-            // Reset error message and show spinner
+            // Reset error message and progress bar
             errorMessage.classList.add('hidden');
             errorMessage.textContent = "";
             loadingSpinner.classList.remove('hidden');
+            progressContainer.classList.remove('hidden');
+            progressText.classList.remove('hidden');
+            progressBar.style.width = '0%';
+            progressText.textContent = '0%';
 
             try {
-                // Capture form input values
                 const url = urlInput.value;
                 const quality = qualitySelect.value;
                 const type = typeSelect.value;
 
-                // Fetch the video from the API
                 const response = await fetch(`/api/v1/video?url=${encodeURIComponent(url)}&quality=${encodeURIComponent(quality)}&type=${encodeURIComponent(type)}`);
                 
-                // Handle HTTP errors
                 if (!response.ok) {
-                    if (response.status === 404) {
-                        throw new Error("Video not found. Please check the URL and try again.");
-                    } else if (response.status === 500) {
-                        throw new Error("Server error. Please try again later.");
-                    } else {
-                        throw new Error(`Unexpected error: ${response.status}`);
-                    }
+                    throw new Error(response.status === 404 ? "Video not found. Please check the URL and try again." : "Server error. Please try again later.");
                 }
                 
-                // Get video as a Blob
-                const videoBlob = await response.blob();
+                const reader = response.body.getReader();
+                const contentLength = +response.headers.get('Content-Length') || 0;
+
+                let receivedLength = 0;
+                const chunks = [];
+
+                while (true) {
+                    const { done, value } = await reader.read();
+
+                    if (done) break;
+
+                    chunks.push(value);
+                    receivedLength += value.length;
+
+                    const percentComplete = Math.round((receivedLength / contentLength) * 100);
+                    progressBar.style.width = `${percentComplete}%`;
+                    progressText.textContent = `${percentComplete}%`;
+                }
+
+                const videoBlob = new Blob(chunks);
                 const videoUrl = URL.createObjectURL(videoBlob);
 
-                // Create download link
                 const downloadLink = document.createElement('a');
                 downloadLink.href = videoUrl;
                 downloadLink.download = type === 'audio' ? 'audio.mp3' : 'video.mp4';
@@ -93,12 +115,12 @@
                 URL.revokeObjectURL(videoUrl);
 
             } catch (error) {
-                // Display error message
                 errorMessage.textContent = error.message;
                 errorMessage.classList.remove('hidden');
             } finally {
-                // Hide spinner
                 loadingSpinner.classList.add('hidden');
+                progressContainer.classList.add('hidden');
+                progressText.classList.add('hidden');
             }
         });
     </script>
