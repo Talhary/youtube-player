@@ -32,14 +32,13 @@
                     <option value="audio">Audio</option>
                 </select>
             </div>
-            <button id="downloadBtn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none mb-4">
+            <button type="button" id="downloadBtn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none mb-4">
                 Download Video
             </button>
             <div id="loadingSpinner" class="hidden border-4 border-blue-500 border-t-transparent rounded-full w-12 h-12 animate-spin"></div>
 
             <!-- Error Message -->
             <div id="errorMessage" class="hidden text-red-600 mt-4"></div>
-        
         </form>
         <div id="responseMessage" class="mt-4 text-center text-red-500 hidden"></div>
     </div>
@@ -47,16 +46,27 @@
         const downloadBtn = document.getElementById('downloadBtn');
         const loadingSpinner = document.getElementById('loadingSpinner');
         const errorMessage = document.getElementById('errorMessage');
+        const urlInput = document.getElementById('url');
+        const qualitySelect = document.getElementById('quality');
+        const typeSelect = document.getElementById('type');
 
-        downloadBtn.addEventListener('click', async () => {
+        downloadBtn.addEventListener('click', async (event) => {
+            // Prevent form submission
+            event.preventDefault();
+
             // Reset error message and show spinner
             errorMessage.classList.add('hidden');
             errorMessage.textContent = "";
             loadingSpinner.classList.remove('hidden');
 
             try {
-                // Fetch the video
-                const response = await fetch('/api/v1/video?url=<video_url>&quality=360p&type=video');
+                // Capture form input values
+                const url = urlInput.value;
+                const quality = qualitySelect.value;
+                const type = typeSelect.value;
+
+                // Fetch the video from the API
+                const response = await fetch(`/api/v1/video?url=${encodeURIComponent(url)}&quality=${encodeURIComponent(quality)}&type=${encodeURIComponent(type)}`);
                 
                 // Handle HTTP errors
                 if (!response.ok) {
@@ -76,7 +86,7 @@
                 // Create download link
                 const downloadLink = document.createElement('a');
                 downloadLink.href = videoUrl;
-                downloadLink.download = 'video.mp4';
+                downloadLink.download = type === 'audio' ? 'audio.mp3' : 'video.mp4';
                 document.body.appendChild(downloadLink);
                 downloadLink.click();
                 document.body.removeChild(downloadLink);
