@@ -359,6 +359,7 @@ const getYtInfo = async (req, res) => {
 
         if (!quality) quality = '360p';
         let titleYt = infoYt.videoDetails.title.replace(/[^a-zA-Z0-9]/g, '').split('').slice(0, 30).join('') + '_' + quality + '_' + type;
+        res.setHeader('Content-Disposition', 'attachment; filename=' + titleYt);
         if (type === 'audio') {
             const audio = infoYt.formats.filter(el => el.hasAudio && el.hasVideo == false).slice(-1)[0];
             const downloadsDir = path.resolve(__dirname, 'downloads');
@@ -424,7 +425,7 @@ const getYtInfo = async (req, res) => {
             stream.on("error", reject);
             stream.on("finish", resolve);
         });
-
+        
         res.sendFile(file);
 
         setTimeout(() => {
