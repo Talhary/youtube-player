@@ -47,93 +47,42 @@
         </form>
     </div>
 
-    <script>
-        const downloadBtn = document.getElementById('downloadBtn');
-        const downloadText = document.getElementById('downloadText');
-        const loadingSpinner = document.getElementById('loadingSpinner');
-        const errorMessage = document.getElementById('errorMessage');
-        const urlInput = document.getElementById('url');
-        const qualitySelect = document.getElementById('quality');
-        const typeSelect = document.getElementById('type');
-        const qualityWrapper = document.getElementById('qualityWrapper');
-        const progressContainer = document.getElementById('progressContainer');
-        const progressBar = document.getElementById('progressBar');
-        const progressText = document.getElementById('progressText');
+ 
+             
+        <script>
+    const downloadBtn = document.getElementById('downloadBtn');
+    const downloadText = document.getElementById('downloadText');
+    const urlInput = document.getElementById('url');
+    const qualitySelect = document.getElementById('quality');
+    const typeSelect = document.getElementById('type');
+    const qualityWrapper = document.getElementById('qualityWrapper');
 
-        // Update UI based on selected type
-        typeSelect.addEventListener('change', () => {
-            if (typeSelect.value === 'audio') {
-                qualityWrapper.style.display = 'none';
-                downloadText.textContent = 'Download Audio';
-            } else {
-                qualityWrapper.style.display = 'block';
-                downloadText.textContent = 'Download Video';
-            }
-        });
+    // Update UI based on selected type
+    typeSelect.addEventListener('change', () => {
+        if (typeSelect.value === 'audio') {
+            qualityWrapper.style.display = 'none';
+            downloadText.textContent = 'Open Audio';
+        } else {
+            qualityWrapper.style.display = 'block';
+            downloadText.textContent = 'Open Video';
+        }
+    });
 
-        downloadBtn.addEventListener('click', async (event) => {
-            event.preventDefault();
+    downloadBtn.addEventListener('click', (event) => {
+        event.preventDefault();
 
-            // Reset UI elements
-            errorMessage.classList.add('hidden');
-            errorMessage.textContent = "";
-            loadingSpinner.classList.remove('hidden');
-            downloadText.classList.add('hidden');
-            progressContainer.classList.remove('hidden');
-            progressText.classList.remove('hidden');
-            progressBar.style.width = '0%';
-            progressText.textContent = '0%';
+        const url = urlInput.value;
+        const quality = qualitySelect.value;
+        const type = typeSelect.value;
 
-            try {
-                const url = urlInput.value;
-                const quality = qualitySelect.value;
-                const type = typeSelect.value;
+        // Construct the URL based on the inputs
+        const constructedUrl = `/api/v1/video?url=${encodeURIComponent(url)}&quality=${encodeURIComponent(quality)}&type=${encodeURIComponent(type)}`;
 
-                const response = await fetch(`/api/v1/video?url=${encodeURIComponent(url)}&quality=${encodeURIComponent(quality)}&type=${encodeURIComponent(type)}`);
+        // Open the constructed URL in a new tab
+        window.open(constructedUrl, '_blank');
+    });
+        </script>
+    
                 
-                if (!response.ok) {
-                    throw new Error(response.status === 404 ? "Video not found. Please check the URL and try again." : "Server error. Please try again later.");
-                }
-
-                const reader = response.body.getReader();
-                const contentLength = +response.headers.get('Content-Length') || 0;
-
-                let receivedLength = 0;
-                const chunks = [];
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    chunks.push(value);
-                    receivedLength += value.length;
-
-                    const percentComplete = Math.round((receivedLength / contentLength) * 100);
-                    progressBar.style.width = `${percentComplete}%`;
-                    progressText.textContent = `${percentComplete}%`;
-                }
-
-                const videoBlob = new Blob(chunks);
-                const videoUrl = URL.createObjectURL(videoBlob);
-
-                const downloadLink = document.createElement('a');
-                downloadLink.href = videoUrl;
-                downloadLink.download = type === 'audio' ? 'audio.mp3' : 'video.mp4';
-                document.body.appendChild(downloadLink);
-                downloadLink.click();
-                document.body.removeChild(downloadLink);
-                URL.revokeObjectURL(videoUrl);
-
-            } catch (error) {
-                errorMessage.textContent = error.message;
-                errorMessage.classList.remove('hidden');
-            } finally {
-                loadingSpinner.classList.add('hidden');
-                downloadText.classList.remove('hidden');
-                progressContainer.classList.add('hidden');
-                progressText.classList.add('hidden');
-            }
-        });
-    </script>
 </body>
 </html>
