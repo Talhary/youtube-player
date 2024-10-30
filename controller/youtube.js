@@ -358,7 +358,7 @@ const getYtInfo = async (req, res) => {
         if (!type) type = 'video';
 
         if (!quality) quality = '360p';
-        let titleYt = infoYt.videoDetails.title.replace(/[^a-zA-Z0-9]/g, '').split('').slice(0, 30).join('') + '_' + quality + '_' + type;
+        let titleYt = infoYt.videoDetails.title.replace(/[^a-zA-Z0-9]/g, match => (match === ' ' ? '_' : '')).split('').slice(0, 30).join('') + '_' + quality + '_' + type;
         if (type === 'audio') {
             const audio = infoYt.formats.filter(el => el.hasAudio && el.hasVideo == false).slice(-1)[0];
             const downloadsDir = path.resolve(__dirname, 'downloads');
