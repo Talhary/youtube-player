@@ -367,7 +367,7 @@ const getYtInfo = async (req, res) => {
             }
             const file = path.resolve(downloadsDir,`${titleYt}.mp3`);
             await downloadFile(audio.url,file);
-        res.setHeader('Content-Disposition', 'attachment; filename=' + `${titleYt}.mp3`);
+        res.setHeader('Content-Disposition', 'attachment; filename=' + `"${titleYt}.mp3"`);
 
             res.sendFile(file)
             setTimeout(() => {
@@ -400,7 +400,7 @@ const getYtInfo = async (req, res) => {
             setTimeout(() => {
                 if (fs.existsSync(file)) fs.unlinkSync(file);
             }, 1 * 60 * 60_000);
-        res.setHeader('Content-Disposition', 'attachment; filename=' + `${titleYt}.mp4`);
+        res.setHeader('Content-Disposition', 'attachment; filename=' + `"${titleYt}.mp4"`);
 
             return res.sendFile(file);
 
@@ -428,7 +428,7 @@ const getYtInfo = async (req, res) => {
             stream.on("error", reject);
             stream.on("finish", resolve);
         });
-        res.setHeader('Content-Disposition', 'attachment; filename=' + `${titleYt}.mp4`);
+        res.setHeader('Content-Disposition', 'attachment; filename=' + `"${titleYt}.mp4"`);
         
         res.sendFile(file);
 
