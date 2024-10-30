@@ -340,9 +340,9 @@ const getYtInfo = async (req, res) => {
     try {
         let infoYt = await ytdl.getInfo(url, { agent });
         let titleYt = infoYt.videoDetails.title.replace(/[^a-zA-Z0-9]/g, '');
-        if (!quality) quality = '360';
+        if (!quality) quality = '360p';
         fs.writeFileSync('data.json',JSON.stringify(infoYt.formats))
-        const format = infoYt.formats.filter(el => el.height >= quality  && el.audioBitrate ).slice(-1)[0];
+        const format = infoYt.formats.filter(el => el.qualityLabel == quality  && el.audioBitrate ).slice(-1)[0];
         
         if (!format) {
             console.log('❌ No matching quality found!');
