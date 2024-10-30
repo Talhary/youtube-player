@@ -15,7 +15,7 @@
                 <input type="text" id="url" name="url" required
                     class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
             </div>
-            <div>
+            <div id="qualityWrapper">
                 <label for="quality" class="block text-sm font-medium text-gray-700">Quality</label>
                 <select id="quality" name="quality"
                     class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
@@ -32,42 +32,50 @@
                     <option value="audio">Audio</option>
                 </select>
             </div>
-            <button type="button" id="downloadBtn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none mb-4">
-                Download Video
+            <button type="button" id="downloadBtn" class="px-4 py-2 bg-blue-600 w-full text-white rounded-md hover:bg-blue-700 focus:outline-none mb-4 flex items-center justify-center space-x-2">
+                <span id="downloadText">Download Video</span>
+                <div id="loadingSpinner" class="hidden border-4 border-white border-t-transparent rounded-full w-6 h-6 animate-spin"></div>
             </button>
-            <div id="loadingSpinner" class="hidden border-4 border-blue-500 border-t-transparent rounded-full w-12 h-12 animate-spin"></div>
-
-            <!-- Progress Bar -->
-            <div class="mt-4">
-                <div id="progressContainer" class="hidden w-full bg-gray-200 rounded-full h-2.5">
-                    <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%;"></div>
-                </div>
-                <p id="progressText" class="text-sm text-gray-600 text-center mt-2 hidden">0%</p>
+            <div id="progressContainer" class="hidden w-full bg-gray-200 rounded-full h-2.5">
+                <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%;"></div>
             </div>
-
-            <!-- Error Message -->
+            <p id="progressText" class="text-sm text-gray-600 text-center mt-2 hidden">0%</p>
             <div id="errorMessage" class="hidden text-red-600 mt-4"></div>
         </form>
     </div>
 
     <script>
         const downloadBtn = document.getElementById('downloadBtn');
+        const downloadText = document.getElementById('downloadText');
         const loadingSpinner = document.getElementById('loadingSpinner');
         const errorMessage = document.getElementById('errorMessage');
         const urlInput = document.getElementById('url');
         const qualitySelect = document.getElementById('quality');
         const typeSelect = document.getElementById('type');
+        const qualityWrapper = document.getElementById('qualityWrapper');
         const progressContainer = document.getElementById('progressContainer');
         const progressBar = document.getElementById('progressBar');
         const progressText = document.getElementById('progressText');
 
+        // Update UI based on selected type
+        typeSelect.addEventListener('change', () => {
+            if (typeSelect.value === 'audio') {
+                qualityWrapper.style.display = 'none';
+                downloadText.textContent = 'Download Audio';
+            } else {
+                qualityWrapper.style.display = 'block';
+                downloadText.textContent = 'Download Video';
+            }
+        });
+
         downloadBtn.addEventListener('click', async (event) => {
             event.preventDefault();
 
-            // Reset error message and progress bar
+            // Reset UI elements
             errorMessage.classList.add('hidden');
             errorMessage.textContent = "";
             loadingSpinner.classList.remove('hidden');
+            downloadText.classList.add('hidden');
             progressContainer.classList.remove('hidden');
             progressText.classList.remove('hidden');
             progressBar.style.width = '0%';
@@ -83,7 +91,7 @@
                 if (!response.ok) {
                     throw new Error(response.status === 404 ? "Video not found. Please check the URL and try again." : "Server error. Please try again later.");
                 }
-                
+
                 const reader = response.body.getReader();
                 const contentLength = +response.headers.get('Content-Length') || 0;
 
@@ -92,7 +100,6 @@
 
                 while (true) {
                     const { done, value } = await reader.read();
-
                     if (done) break;
 
                     chunks.push(value);
@@ -119,6 +126,7 @@
                 errorMessage.classList.remove('hidden');
             } finally {
                 loadingSpinner.classList.add('hidden');
+                downloadText.classList.remove('hidden');
                 progressContainer.classList.add('hidden');
                 progressText.classList.add('hidden');
             }
