@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Downloader</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+    <div class="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+        <h1 class="text-2xl font-bold text-center mb-4">YouTube Video Downloader</h1>
+        <form id="videoForm" class="space-y-4">
+            <div>
+                <label for="url" class="block text-sm font-medium text-gray-700">Video URL</label>
+                <input type="text" id="url" name="url" required
+                    class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+            </div>
+            <div>
+                <label for="quality" class="block text-sm font-medium text-gray-700">Quality</label>
+                <select id="quality" name="quality"
+                    class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                    <option value="360p">360p</option>
+                    <option value="480p">480p</option>
+                    <option value="720p">720p</option>
+                </select>
+            </div>
+            <div>
+                <label for="type" class="block text-sm font-medium text-gray-700">Type</label>
+                <select id="type" name="type"
+                    class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                    <option value="video">Video</option>
+                    <option value="audio">Audio</option>
+                </select>
+            </div>
+            <button id="downloadBtn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none mb-4">
+                Download Video
+            </button>
+            <div id="loadingSpinner" class="hidden border-4 border-blue-500 border-t-transparent rounded-full w-12 h-12 animate-spin"></div>
+
+            <!-- Error Message -->
+            <div id="errorMessage" class="hidden text-red-600 mt-4"></div>
+        
+        </form>
+        <div id="responseMessage" class="mt-4 text-center text-red-500 hidden"></div>
+    </div>
+    <script>
+        const downloadBtn = document.getElementById('downloadBtn');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const errorMessage = document.getElementById('errorMessage');
+
+        downloadBtn.addEventListener('click', async () => {
+            // Reset error message and show spinner
+            errorMessage.classList.add('hidden');
+            errorMessage.textContent = "";
+            loadingSpinner.classList.remove('hidden');
+
+            try {
+                // Fetch the video
+                const response = await fetch('/api/v1/video?url=<video_url>&quality=360p&type=video');
+                
+                // Handle HTTP errors
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error("Video not found. Please check the URL and try again.");
+                    } else if (response.status === 500) {
+                        throw new Error("Server error. Please try again later.");
+                    } else {
+                        throw new Error(`Unexpected error: ${response.status}`);
+                    }
+                }
+                
+                // Get video as a Blob
+                const videoBlob = await response.blob();
+                const videoUrl = URL.createObjectURL(videoBlob);
+
+                // Create download link
+                const downloadLink = document.createElement('a');
+                downloadLink.href = videoUrl;
+                downloadLink.download = 'video.mp4';
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+                URL.revokeObjectURL(videoUrl);
+
+            } catch (error) {
+                // Display error message
+                errorMessage.textContent = error.message;
+                errorMessage.classList.remove('hidden');
+            } finally {
+                // Hide spinner
+                loadingSpinner.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

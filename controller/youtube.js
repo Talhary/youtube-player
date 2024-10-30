@@ -327,24 +327,83 @@ const cookies = [
 const ytdl = require('@distube/ytdl-core');
 const agent = ytdl.createAgent(cookies);
 const fs = require('fs');
+const axios = require('axios')
 const path = require('path');
-
+const { combineAudioVideo } = require('./audio-video-mix');
+async function downloadFile(url, outputPath) {
+    const response = await axios({
+        url,
+        method: 'GET',
+        responseType: 'stream',
+    });
+    return new Promise((resolve, reject) => {
+        const writer = fs.createWriteStream(outputPath);
+        response.data.pipe(writer);
+        writer.on('finish', () => resolve(outputPath));
+        writer.on('error', reject);
+    });
+}
 const getYtInfo = async (req, res) => {
-    let { url, quality } = req.query;
-   
+    let { url, quality, type } = req.query;
+
     if (!url) {
         res.status(400).json({ status: 400, message: 'we need url mf' });
         return;
     }
-    
+
     try {
         let infoYt = await ytdl.getInfo(url, { agent });
-        let titleYt = infoYt.videoDetails.title.replace(/[^a-zA-Z0-9]/g, '');
+        // fs.writeFileSync('data.json',JSON.stringify(infoYt))
+        // console.log(infoYt)
+        if (!type) type = 'video';
+
         if (!quality) quality = '360p';
-        fs.writeFileSync('data.json',JSON.stringify(infoYt.formats))
-        const format = infoYt.formats.filter(el => el.qualityLabel == quality  && el.audioBitrate ).slice(-1)[0];
-        
+        let titleYt = infoYt.videoDetails.title.replace(/[^a-zA-Z0-9]/g, '').split('').slice(0, 30).join('') + '_' + quality + '_' + type;
+        if (type === 'audio') {
+            const audio = infoYt.formats.filter(el => el.hasAudio && el.hasVideo == false).slice(-1)[0];
+            const downloadsDir = path.resolve(__dirname, 'downloads');
+            if (!fs.existsSync(downloadsDir)) {
+                fs.mkdirSync(downloadsDir);
+            }
+            const file = path.resolve(downloadsDir,`${titleYt}.mp3`);
+            await downloadFile(audio.url,file);
+            res.sendFile(file)
+            setTimeout(() => {
+                if (fs.existsSync(file)) fs.unlinkSync(file);
+            }, 1 * 60 * 60_000);
+            return;
+        }
+        // fs.writeFileSync('data.json',JSON.stringify(infoYt.formats))
+        const format = infoYt.formats.filter(el => el.qualityLabel == quality && el.audioBitrate).slice(-1)[0];
+
         if (!format) {
+            const downloadsDir = path.resolve(__dirname, 'downloads');
+            if (!fs.existsSync(downloadsDir)) {
+                fs.mkdirSync(downloadsDir);
+            }
+            const video = infoYt.formats.filter(el => el.qualityLabel == quality).slice(-1)[0];
+            const audio = infoYt.formats.filter(el => el.hasAudio && el.hasVideo == false).slice(-1)[0];
+            if (!video || !audio) {
+                res.set('Content-Type', 'text/html');
+                res.send(Buffer.from('<h2>Quality not found</h2>'));
+                return
+            }            // console.log(video,audio);
+            // res.json({file:video,audio:audio})
+            // return
+            const file = path.resolve(downloadsDir, `${titleYt}.mp4`);
+            if (fs.existsSync(file)) {
+                return res.sendFile(file)
+            }
+            const pathofVideo = await combineAudioVideo(video["url"], audio["url"], downloadsDir, file)
+            setTimeout(() => {
+                if (fs.existsSync(file)) fs.unlinkSync(file);
+            }, 1 * 60 * 60_000);
+            return res.sendFile(file);
+
+            setTimeout(() => {
+                if (fs.existsSync(file)) fs.unlinkSync(file);
+            }, 1 * 60 * 60_000);
+            console.log(pathofVideo)
             console.log('❌ No matching quality found!');
             res.json({ msg: 'No matching quality Found' }).status(400);
             return;
@@ -356,14 +415,16 @@ const getYtInfo = async (req, res) => {
         }
 
         const file = path.resolve(downloadsDir, `${titleYt}.mp4`);
-
+        if (fs.existsSync(file)) {
+            return res.sendFile(file)
+        }
         const stream = ytdl(url, { agent, format }).pipe(fs.createWriteStream(file));
 
         await new Promise((resolve, reject) => {
             stream.on("error", reject);
             stream.on("finish", resolve);
         });
-        
+
         res.sendFile(file);
 
         setTimeout(() => {
