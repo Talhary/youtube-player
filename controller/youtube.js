@@ -394,7 +394,7 @@ const getYtInfo = async (req, res) => {
             // return
             const file = path.resolve(downloadsDir, `${titleYt}.mp4`);
             if (fs.existsSync(file)) {
-                return res.sendFile(file)
+                return res.download(file)
             }
             const pathofVideo = await combineAudioVideo(video["url"], audio["url"], downloadsDir, file)
             setTimeout(() => {
